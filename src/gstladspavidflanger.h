@@ -80,6 +80,8 @@ struct _GstLadspaVidFlanger
 struct _GstLadspaVidFlangerClass 
 {
   GstElementClass parent_class;
+
+  ladspa_plugin plugin;
 };
 
 GType gst_ladspa_vid_flanger_get_type (void);

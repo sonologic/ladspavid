@@ -74,16 +74,9 @@ enum
   LAST_SIGNAL
 };
 
-enum
-{
-  PROP_0,
-  PROP_SILENT,
-  PROP_RATE,
-  PROP_DELAY,
-  PROP_MAX_SLOW,
-  PROP_LFO,
-  PROP_FEEDBACK
-};
+#define PROP_0 0
+#define PROP_SILENT 1
+#define PROP_DYNAMIC 2
 
 /* the capabilities of the inputs and outputs.
  *
@@ -137,6 +130,15 @@ gst_ladspa_vid_flanger_class_init (GstLadspaVidFlangerClass * klass)
 {
   GObjectClass *gobject_class;
   GstElementClass *gstelement_class;
+  int i=0,param_index=0;
+  char param_str[256];
+  LADSPA_Data default_value;
+
+  memset(&klass->plugin,0,sizeof(ladspa_plugin));
+  printf("init plugin\n");
+
+  ladspa_load_plugin("/usr/lib/ladspa/flanger_1191.so",&klass->plugin);
+  //ladspa_load_plugin("/usr/lib/ladspa/crossover_dist_1404.so",&klass->plugin);
 
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
@@ -148,6 +150,50 @@ gst_ladspa_vid_flanger_class_init (GstLadspaVidFlangerClass * klass)
       g_param_spec_boolean ("silent", "Silent", "Produce verbose output ?",
           FALSE, G_PARAM_READWRITE));
 
+  for(i=0;i<klass->plugin.pd->PortCount;i++) {
+	  if( ( klass->plugin.pd->PortDescriptors[i] & LADSPA_PORT_CONTROL)
+			  && ( klass->plugin.pd->PortDescriptors[i] & LADSPA_PORT_INPUT ) ) {
+
+		  printf("param_index %i\n",param_index);
+		  sprintf(param_str,"param%i",param_index);
+
+		  default_value=0.0;
+		  if( ( LADSPA_IS_HINT_DEFAULT_MINIMUM(klass->plugin.pd->PortRangeHints[i].HintDescriptor) )
+				 || ( LADSPA_IS_HINT_DEFAULT_LOW(klass->plugin.pd->PortRangeHints[i].HintDescriptor) )
+				 || ( LADSPA_IS_HINT_DEFAULT_MIDDLE(klass->plugin.pd->PortRangeHints[i].HintDescriptor) )
+			  ) {
+			  default_value = klass->plugin.pd->PortRangeHints[i].LowerBound;
+		  }
+		  if( ( LADSPA_IS_HINT_DEFAULT_HIGH(klass->plugin.pd->PortRangeHints[i].HintDescriptor) )
+				 || ( LADSPA_IS_HINT_DEFAULT_MAXIMUM(klass->plugin.pd->PortRangeHints[i].HintDescriptor) )
+			  ) {
+			  default_value = klass->plugin.pd->PortRangeHints[i].UpperBound;
+		  }
+		  if( ( LADSPA_IS_HINT_DEFAULT_0(klass->plugin.pd->PortRangeHints[i].HintDescriptor) )) {
+			  default_value = 0.0;
+		  }
+		  if( ( LADSPA_IS_HINT_DEFAULT_1(klass->plugin.pd->PortRangeHints[i].HintDescriptor) )) {
+			  default_value = 1.0;
+		  }
+		  if( ( LADSPA_IS_HINT_DEFAULT_100(klass->plugin.pd->PortRangeHints[i].HintDescriptor) )) {
+			  default_value = 100.0;
+		  }
+		  if( ( LADSPA_IS_HINT_DEFAULT_440(klass->plugin.pd->PortRangeHints[i].HintDescriptor) )) {
+			  default_value = 440.0;
+		  }
+
+		  printf("default_value %f\n",default_value);
+		  g_object_class_install_property (gobject_class, PROP_DYNAMIC + param_index,
+		      g_param_spec_float (param_str, param_str, klass->plugin.pd->PortNames[i],
+		    		  klass->plugin.pd->PortRangeHints[i].LowerBound,
+		    		  klass->plugin.pd->PortRangeHints[i].UpperBound,
+		    		  default_value,
+		    		  G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE));
+
+		  param_index++;
+	  }
+  }
+/*
   g_object_class_install_property (gobject_class, PROP_RATE,
       g_param_spec_long ("rate", "Rate", "LADSPA sample frequency",
     		  1,128000,44100,
@@ -168,7 +214,7 @@ gst_ladspa_vid_flanger_class_init (GstLadspaVidFlangerClass * klass)
       g_param_spec_float ("feedback", "Feedback", "Feedback",
     		  -1.0, 1.0, -0.3,
     		  G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE));
-
+*/
 }
 
 /* initialize the new element
@@ -181,9 +227,8 @@ gst_ladspa_vid_flanger_init (GstLadspaVidFlanger * filter,
     GstLadspaVidFlangerClass * gclass)
 {
   memset(&filter->wrapper,0,sizeof(ladspa_wrapper));
-  printf("init plugin\n");
 
-  ladspa_init_plugin("/usr/lib/ladspa/flanger_1191.so",&filter->wrapper);
+  ladspa_init_plugin(&gclass->plugin, &filter->wrapper);
 
   filter->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
 
@@ -214,6 +259,7 @@ gst_ladspa_vid_flanger_set_property (GObject * object, guint prop_id,
     case PROP_SILENT:
       filter->silent = g_value_get_boolean (value);
       break;
+      /*
     case PROP_DELAY:
       filter->wrapper.delay = g_value_get_float(value);
       break;
@@ -226,8 +272,10 @@ gst_ladspa_vid_flanger_set_property (GObject * object, guint prop_id,
     case PROP_FEEDBACK:
       filter->wrapper.feedback = g_value_get_float(value);
       break;
+      */
     default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      filter->wrapper.param[prop_id - PROP_DYNAMIC] = g_value_get_float(value);
+      //G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
 }
@@ -242,7 +290,7 @@ gst_ladspa_vid_flanger_get_property (GObject * object, guint prop_id,
     case PROP_SILENT:
       g_value_set_boolean (value, filter->silent);
       break;
-    case PROP_DELAY:
+/*    case PROP_DELAY:
       g_value_set_float (value, filter->wrapper.delay);
       break;
     case PROP_MAX_SLOW:
@@ -253,9 +301,10 @@ gst_ladspa_vid_flanger_get_property (GObject * object, guint prop_id,
       break;
     case PROP_FEEDBACK:
       g_value_set_float (value, filter->wrapper.feedback);
-      break;
+      break;*/
     default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      return filter->wrapper.param[prop_id - PROP_DYNAMIC];
+      //G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
 }
