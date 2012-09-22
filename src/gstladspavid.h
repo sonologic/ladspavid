@@ -47,6 +47,7 @@
 #define __GST_LADSPAVID_H__
 
 #include <gst/gst.h>
+#include "ladspa_wrapper.h"
 
 G_BEGIN_DECLS
 
@@ -72,6 +73,8 @@ struct _GstLadspaVid
   GstPad *sinkpad, *srcpad;
 
   gboolean silent;
+
+  ladspa_wrapper wrapper;
 };
 
 struct _GstLadspaVidClass 

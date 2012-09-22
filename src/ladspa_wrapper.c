@@ -2,87 +2,81 @@
 #include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "ladspa_wrapper.h"
 
 #define BUFFER_SIZE 2048
 
-int ladspa_init_plugin(const char *filename) {
-  void *dlp;
-  LADSPA_Handle ph; 
-  const LADSPA_Descriptor *pd;
-  LADSPA_Descriptor_Function pdf;
-  int i,j;
-  LADSPA_Data delay = 2.5;
-  LADSPA_Data max_slow = 2.0;
-  LADSPA_Data lfo = 0.5;
-  LADSPA_Data feedback = -0.1;
-  unsigned char rawinput[BUFFER_SIZE];
-  unsigned char rawoutput[BUFFER_SIZE];
-  LADSPA_Data input[BUFFER_SIZE];
-  LADSPA_Data output[BUFFER_SIZE];
-  FILE *fp;
-  FILE *fpo;
-  
+int ladspa_init_plugin(const char *filename, ladspa_wrapper *wrapper) {
+  int i;
+  int rv=-1;
 
-  //dlp = dlopen("/usr/lib/ladspa/flanger_1191.so", RTLD_NOW);
-  dlp = dlopen(filename, RTLD_NOW);
+  wrapper->dl = dlopen(filename, RTLD_NOW);
 
-  if(dlp==NULL) goto exitdl;
+  if(wrapper->dl==NULL) goto exitdl;
 
-  printf("dlp: 0x%x\n",dlp);
+  printf("dlp: 0x%x\n",wrapper->dl);
 
-  pdf = (LADSPA_Descriptor_Function)dlsym(dlp, "ladspa_descriptor");
+  wrapper->pdf = (LADSPA_Descriptor_Function)dlsym(wrapper->dl, "ladspa_descriptor");
 
-  if(pdf==NULL) goto exitdl;
+  if(wrapper->pdf==NULL) goto exitdl;
 
-  printf("pdf: 0x%x\n",pdf);
+  printf("pdf: 0x%x\n",wrapper->pdf);
 
   for(i=0;;i++) {
-    pd = pdf(i);
-    if(pd==NULL) break;
-    printf("%i: 0x%x - %s (%s)\n",i,pd->UniqueID,pd->Label,pd->Name);
+    wrapper->pd = wrapper->pdf(i);
+    if(wrapper->pd==NULL) break;
+    printf("%i: 0x%x - %s (%s)\n",i,wrapper->pd->UniqueID,wrapper->pd->Label,wrapper->pd->Name);
   }
 
-  pd = pdf(0);
-  printf("portcount = %i\n",pd->PortCount);
+  wrapper->pd = wrapper->pdf(0);
+  printf("portcount = %i\n",wrapper->pd->PortCount);
 
-  for(i=0;i<pd->PortCount;i++) {
-    printf("port %i: %s\n",i,pd->PortNames[i]);
-    printf(" descriptor %i: ",pd->PortDescriptors[i]);
-    if(pd->PortDescriptors[i] & LADSPA_PORT_INPUT) printf("input ");
-    if(pd->PortDescriptors[i] & LADSPA_PORT_OUTPUT) printf("output ");
-    if(pd->PortDescriptors[i] & LADSPA_PORT_CONTROL) printf("control ");
-    if(pd->PortDescriptors[i] & LADSPA_PORT_AUDIO) printf("audio ");
+  for(i=0;i<wrapper->pd->PortCount;i++) {
+    printf("port %i: %s\n",i,wrapper->pd->PortNames[i]);
+    printf(" descriptor %i: ",wrapper->pd->PortDescriptors[i]);
+    if(wrapper->pd->PortDescriptors[i] & LADSPA_PORT_INPUT) printf("input ");
+    if(wrapper->pd->PortDescriptors[i] & LADSPA_PORT_OUTPUT) printf("output ");
+    if(wrapper->pd->PortDescriptors[i] & LADSPA_PORT_CONTROL) printf("control ");
+    if(wrapper->pd->PortDescriptors[i] & LADSPA_PORT_AUDIO) printf("audio ");
     printf("\n");
-    printf("  range hint 0x%x: ",pd->PortRangeHints[i]);
-    if(LADSPA_IS_HINT_BOUNDED_BELOW(pd->PortRangeHints[i].HintDescriptor)) printf("bounded_below ");
-    if(LADSPA_IS_HINT_BOUNDED_ABOVE(pd->PortRangeHints[i].HintDescriptor)) printf("bounded_above ");
-    if(LADSPA_IS_HINT_TOGGLED(pd->PortRangeHints[i].HintDescriptor)) printf("toggled ");
-    if(LADSPA_IS_HINT_SAMPLE_RATE(pd->PortRangeHints[i].HintDescriptor)) printf("sample_rate ");
-    if(LADSPA_IS_HINT_LOGARITHMIC(pd->PortRangeHints[i].HintDescriptor)) printf("log ");
-    if(LADSPA_IS_HINT_INTEGER(pd->PortRangeHints[i].HintDescriptor)) printf("int ");
-    if(LADSPA_IS_HINT_DEFAULT_MINIMUM(pd->PortRangeHints[i].HintDescriptor)) printf("default_minimum ");
-    if(LADSPA_IS_HINT_DEFAULT_LOW(pd->PortRangeHints[i].HintDescriptor)) printf("default_low ");
-    if(LADSPA_IS_HINT_DEFAULT_MIDDLE(pd->PortRangeHints[i].HintDescriptor)) printf("default_middle ");
-    if(LADSPA_IS_HINT_DEFAULT_HIGH(pd->PortRangeHints[i].HintDescriptor)) printf("default_high ");
-    if(LADSPA_IS_HINT_DEFAULT_MAXIMUM(pd->PortRangeHints[i].HintDescriptor)) printf("default_maximum ");
-    if(LADSPA_IS_HINT_DEFAULT_0(pd->PortRangeHints[i].HintDescriptor)) printf("default_0 ");
-    if(LADSPA_IS_HINT_DEFAULT_1(pd->PortRangeHints[i].HintDescriptor)) printf("default_1 ");
-    if(LADSPA_IS_HINT_DEFAULT_100(pd->PortRangeHints[i].HintDescriptor)) printf("default_100 ");
-    if(LADSPA_IS_HINT_DEFAULT_440(pd->PortRangeHints[i].HintDescriptor)) printf("default_440 ");
+    printf("  range hint 0x%x: ",wrapper->pd->PortRangeHints[i]);
+    if(LADSPA_IS_HINT_BOUNDED_BELOW(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("bounded_below ");
+    if(LADSPA_IS_HINT_BOUNDED_ABOVE(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("bounded_above ");
+    if(LADSPA_IS_HINT_TOGGLED(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("toggled ");
+    if(LADSPA_IS_HINT_SAMPLE_RATE(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("sample_rate ");
+    if(LADSPA_IS_HINT_LOGARITHMIC(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("log ");
+    if(LADSPA_IS_HINT_INTEGER(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("int ");
+    if(LADSPA_IS_HINT_DEFAULT_MINIMUM(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("default_minimum ");
+    if(LADSPA_IS_HINT_DEFAULT_LOW(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("default_low ");
+    if(LADSPA_IS_HINT_DEFAULT_MIDDLE(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("default_middle ");
+    if(LADSPA_IS_HINT_DEFAULT_HIGH(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("default_high ");
+    if(LADSPA_IS_HINT_DEFAULT_MAXIMUM(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("default_maximum ");
+    if(LADSPA_IS_HINT_DEFAULT_0(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("default_0 ");
+    if(LADSPA_IS_HINT_DEFAULT_1(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("default_1 ");
+    if(LADSPA_IS_HINT_DEFAULT_100(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("default_100 ");
+    if(LADSPA_IS_HINT_DEFAULT_440(wrapper->pd->PortRangeHints[i].HintDescriptor)) printf("default_440 ");
     printf("\n");
-    printf("  LowerBound = %f, UpperBound = %f\n",pd->PortRangeHints[i].LowerBound,pd->PortRangeHints[i].UpperBound);
+    printf("  LowerBound = %f, UpperBound = %f\n",wrapper->pd->PortRangeHints[i].LowerBound,wrapper->pd->PortRangeHints[i].UpperBound);
   }
 
-  ph = pd->instantiate(pd,1000);
+  wrapper->ph = wrapper->pd->instantiate(wrapper->pd,44100);
 
-  pd->connect_port(ph,0,&delay);
-  pd->connect_port(ph,1,&max_slow);
-  pd->connect_port(ph,2,&lfo);
-  pd->connect_port(ph,3,&feedback);
+  wrapper->delay = 2.5;
+  wrapper->max_slow = 0.3;
+  wrapper->lfo = 0.4;
+  wrapper->feedback = -0.8;
 
-  pd->connect_port(ph,4,input);
-  pd->connect_port(ph,5,output);
+  wrapper->pd->connect_port(wrapper->ph,0,&wrapper->delay);
+  wrapper->pd->connect_port(wrapper->ph,1,&wrapper->max_slow);
+  wrapper->pd->connect_port(wrapper->ph,2,&wrapper->lfo);
+  wrapper->pd->connect_port(wrapper->ph,3,&wrapper->feedback);
 
+  wrapper->pd->connect_port(wrapper->ph,4,wrapper->input);
+  wrapper->pd->connect_port(wrapper->ph,5,wrapper->output);
+
+  if(wrapper->pd->activate) wrapper->pd->activate(wrapper->ph);
+
+  /*
   fp=fopen("knuckles.bgr","r");
   if(!fp) goto exitph;
 
@@ -113,13 +107,36 @@ int ladspa_init_plugin(const char *filename) {
   if(pd->deactivate) pd->deactivate(ph);
 
   fclose(fpo);
-  
-exitfp:
-  fclose(fp);
+  */
+  printf("init done\n");
+  return 0;
 exitph:
-  pd->cleanup(ph);
+wrapper->pd->cleanup(wrapper->ph);
 exitdl:
-  if(ph!=NULL) dlclose(ph);
+  if(wrapper->dl!=NULL) dlclose(wrapper->dl);
 
-  exit(0);
+  return rv;
+}
+
+void ladspa_run_plugin(ladspa_wrapper *wrapper, size_t len, unsigned char *buffer) {
+	size_t ofs=0;
+	size_t blen;
+	int i;
+
+	//printf("processing %d bytes at 0x%x\n",len,buffer);
+	while(len>0) {
+		blen=(len>BUFFER_SIZE)?BUFFER_SIZE:len;
+		//printf(" - %d\n",blen);
+		for(i=0;i<blen;i++)
+			wrapper->input[i]=(float)(buffer[i+ofs]) / 255.0;
+		//printf("run\n");
+		wrapper->pd->run(wrapper->ph,blen);
+		//printf("overwrite\n");
+		for(i=0;i<blen;i++)
+			//buffer[i+ofs]=(unsigned char)(wrapper->input[i]*255);
+			buffer[i+ofs]=(unsigned char)(wrapper->output[i]*255);
+		//printf("inc\n");
+		len-=blen;
+		ofs+=blen;
+	}
 }

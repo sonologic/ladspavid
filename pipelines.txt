@@ -1,0 +1,3 @@
+bitporn
+
+gst-launch --gst-plugin-load=src/.libs/libgstladspavid.so -v filesrc location=/home/gmc/Videos/emf/convert/Closing.dv ! dvdemux ! dvdec ! ffmpegcolorspace ! videoscale ! video/x-raw-yuv, width=320, height=200 ! ladspavid feedback=-0.6 delay=0.9 max_slow=10 lfo=50.3 ! audioparse ! videoparse width=320 height=200 ! autovideosink

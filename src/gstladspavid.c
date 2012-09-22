@@ -60,8 +60,8 @@
 #  include <config.h>
 #endif
 
+#include <string.h>
 #include <gst/gst.h>
-
 #include "gstladspavid.h"
 
 GST_DEBUG_CATEGORY_STATIC (gst_ladspa_vid_debug);
@@ -77,7 +77,12 @@ enum
 enum
 {
   PROP_0,
-  PROP_SILENT
+  PROP_SILENT,
+  PROP_RATE,
+  PROP_DELAY,
+  PROP_MAX_SLOW,
+  PROP_LFO,
+  PROP_FEEDBACK
 };
 
 /* the capabilities of the inputs and outputs.
@@ -116,9 +121,9 @@ gst_ladspa_vid_base_init (gpointer gclass)
 
   gst_element_class_set_details_simple(element_class,
     "LadspaVid",
-    "FIXME:Generic",
-    "FIXME:Generic Template Element",
-    "gmc <<user@hostname.org>>");
+    "Effect/Video",
+    "Feed video through ladspa plugins to create video-glitching effects inspired by http://www.hellocatfood.com/2009/11/16/databending-using-audacity/",
+    "Koen Martens <gmc@sonologic.nl>");
 
   gst_element_class_add_pad_template (element_class,
       gst_static_pad_template_get (&src_factory));
@@ -142,6 +147,28 @@ gst_ladspa_vid_class_init (GstLadspaVidClass * klass)
   g_object_class_install_property (gobject_class, PROP_SILENT,
       g_param_spec_boolean ("silent", "Silent", "Produce verbose output ?",
           FALSE, G_PARAM_READWRITE));
+
+  g_object_class_install_property (gobject_class, PROP_RATE,
+      g_param_spec_long ("rate", "Rate", "LADSPA sample frequency",
+    		  1,128000,44100,
+    		  G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE));
+  g_object_class_install_property (gobject_class, PROP_DELAY,
+      g_param_spec_float ("delay", "Delay", "Delay base (ms)",
+    		  0.1, 25.0, 0.5,
+    		  G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE));
+  g_object_class_install_property (gobject_class, PROP_MAX_SLOW,
+      g_param_spec_float ("max_slow", "Max slowdown (ms)", "Max slowdown (ms)",
+    		  0.0, 10.0, 0.1,
+    		  G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE));
+  g_object_class_install_property (gobject_class, PROP_LFO,
+      g_param_spec_float ("lfo", "LFO", "LFO frequency (Hz)",
+    		  0.05, 100.0, 0.1,
+    		  G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE));
+  g_object_class_install_property (gobject_class, PROP_FEEDBACK,
+      g_param_spec_float ("feedback", "Feedback", "Feedback",
+    		  -1.0, 1.0, -0.3,
+    		  G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE));
+
 }
 
 /* initialize the new element
@@ -153,7 +180,14 @@ static void
 gst_ladspa_vid_init (GstLadspaVid * filter,
     GstLadspaVidClass * gclass)
 {
+  memset(&filter->wrapper,0,sizeof(ladspa_wrapper));
+  printf("init plugin\n");
+
+  ladspa_init_plugin("/usr/lib/ladspa/flanger_1191.so",&filter->wrapper);
+
   filter->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
+
+
   gst_pad_set_setcaps_function (filter->sinkpad,
                                 GST_DEBUG_FUNCPTR(gst_ladspa_vid_set_caps));
   gst_pad_set_getcaps_function (filter->sinkpad,
@@ -180,6 +214,18 @@ gst_ladspa_vid_set_property (GObject * object, guint prop_id,
     case PROP_SILENT:
       filter->silent = g_value_get_boolean (value);
       break;
+    case PROP_DELAY:
+      filter->wrapper.delay = g_value_get_float(value);
+      break;
+    case PROP_MAX_SLOW:
+      filter->wrapper.max_slow = g_value_get_float(value);
+      break;
+    case PROP_LFO:
+      filter->wrapper.lfo = g_value_get_float(value);
+      break;
+    case PROP_FEEDBACK:
+      filter->wrapper.feedback = g_value_get_float(value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -195,6 +241,18 @@ gst_ladspa_vid_get_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_SILENT:
       g_value_set_boolean (value, filter->silent);
+      break;
+    case PROP_DELAY:
+      g_value_set_float (value, filter->wrapper.delay);
+      break;
+    case PROP_MAX_SLOW:
+      g_value_set_float (value, filter->wrapper.max_slow);
+      break;
+    case PROP_LFO:
+      g_value_set_float (value, filter->wrapper.lfo);
+      break;
+    case PROP_FEEDBACK:
+      g_value_set_float (value, filter->wrapper.feedback);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -228,9 +286,10 @@ gst_ladspa_vid_chain (GstPad * pad, GstBuffer * buf)
 
   filter = GST_LADSPAVID (GST_OBJECT_PARENT (pad));
 
-  if (filter->silent == FALSE)
-    g_print ("I'm plugged, therefore I'm in.\n");
+  //if (filter->silent == FALSE)
+  //  g_print ("I'm plugged, therefore I'm in.\n");
 
+  ladspa_run_plugin(&filter->wrapper, buf->size, buf->data);
   /* just push out the incoming buffer without touching it */
   return gst_pad_push (filter->srcpad, buf);
 }
@@ -249,6 +308,8 @@ ladspavid_init (GstPlugin * ladspavid)
    */
   GST_DEBUG_CATEGORY_INIT (gst_ladspa_vid_debug, "ladspavid",
       0, "Template ladspavid");
+
+  gst_controller_init(NULL, NULL);
 
   return gst_element_register (ladspavid, "ladspavid", GST_RANK_NONE,
       GST_TYPE_LADSPAVID);
@@ -271,7 +332,7 @@ GST_PLUGIN_DEFINE (
     GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
     "ladspavid",
-    "Template ladspavid",
+    "Ladspa video filter",
     ladspavid_init,
     VERSION,
     "LGPL",
