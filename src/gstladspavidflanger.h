@@ -43,8 +43,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef __GST_LADSPAVID_H__
-#define __GST_LADSPAVID_H__
+#ifndef __GST_LADSPAVIDFLANGER_H__
+#define __GST_LADSPAVIDFLANGER_H__
 
 #include <gst/gst.h>
 #include "ladspa_wrapper.h"
@@ -52,21 +52,21 @@
 G_BEGIN_DECLS
 
 /* #defines don't like whitespacey bits */
-#define GST_TYPE_LADSPAVID \
-  (gst_ladspa_vid_get_type())
-#define GST_LADSPAVID(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_LADSPAVID,GstLadspaVid))
-#define GST_LADSPAVID_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_LADSPAVID,GstLadspaVidClass))
-#define GST_IS_LADSPAVID(obj) \
-  (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_LADSPAVID))
-#define GST_IS_LADSPAVID_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_LADSPAVID))
+#define GST_TYPE_LADSPAVIDFLANGER \
+  (gst_ladspa_vid_flanger_get_type())
+#define GST_LADSPAVIDFLANGER(obj) \
+  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_LADSPAVIDFLANGER,GstLadspaVidFlanger))
+#define GST_LADSPAVIDFLANGER_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_LADSPAVIDFLANGER,GstLadspaVidFlangerClass))
+#define GST_IS_LADSPAVIDFLANGER(obj) \
+  (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_LADSPAVIDFLANGER))
+#define GST_IS_LADSPAVIDFLANGER_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_LADSPAVIDFLANGER))
 
-typedef struct _GstLadspaVid      GstLadspaVid;
-typedef struct _GstLadspaVidClass GstLadspaVidClass;
+typedef struct _GstLadspaVidFlanger      GstLadspaVidFlanger;
+typedef struct _GstLadspaVidFlangerClass GstLadspaVidFlangerClass;
 
-struct _GstLadspaVid
+struct _GstLadspaVidFlanger
 {
   GstElement element;
 
@@ -77,13 +77,13 @@ struct _GstLadspaVid
   ladspa_wrapper wrapper;
 };
 
-struct _GstLadspaVidClass 
+struct _GstLadspaVidFlangerClass 
 {
   GstElementClass parent_class;
 };
 
-GType gst_ladspa_vid_get_type (void);
+GType gst_ladspa_vid_flanger_get_type (void);
 
 G_END_DECLS
 
-#endif /* __GST_LADSPAVID_H__ */
+#endif /* __GST_LADSPAVIDFLANGER_H__ */

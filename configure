@@ -572,7 +572,7 @@ PACKAGE_STRING='ladspavid 0.1.0'
 PACKAGE_BUGREPORT=''
 PACKAGE_URL=''
 
-ac_unique_file="src/gstladspavid.c"
+ac_unique_file="src/gstladspavidflanger.c"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>

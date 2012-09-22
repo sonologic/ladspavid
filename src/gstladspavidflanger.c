@@ -44,14 +44,14 @@
  */
 
 /**
- * SECTION:element-ladspavid
+ * SECTION:element-ladspavidflanger
  *
- * FIXME:Describe ladspavid here.
+ * FIXME:Describe ladspavidflanger here.
  *
  * <refsect2>
  * <title>Example launch line</title>
  * |[
- * gst-launch -v -m fakesrc ! ladspavid ! fakesink silent=TRUE
+ * gst-launch -v -m fakesrc ! ladspavidflanger ! fakesink silent=TRUE
  * ]|
  * </refsect2>
  */
@@ -62,10 +62,10 @@
 
 #include <string.h>
 #include <gst/gst.h>
-#include "gstladspavid.h"
+#include "gstladspavidflanger.h"
 
-GST_DEBUG_CATEGORY_STATIC (gst_ladspa_vid_debug);
-#define GST_CAT_DEFAULT gst_ladspa_vid_debug
+GST_DEBUG_CATEGORY_STATIC (gst_ladspa_vid_flanger_debug);
+#define GST_CAT_DEFAULT gst_ladspa_vid_flanger_debug
 
 /* Filter signals and args */
 enum
@@ -101,26 +101,26 @@ static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
     GST_STATIC_CAPS ("ANY")
     );
 
-GST_BOILERPLATE (GstLadspaVid, gst_ladspa_vid, GstElement,
+GST_BOILERPLATE (GstLadspaVidFlanger, gst_ladspa_vid_flanger, GstElement,
     GST_TYPE_ELEMENT);
 
-static void gst_ladspa_vid_set_property (GObject * object, guint prop_id,
+static void gst_ladspa_vid_flanger_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
-static void gst_ladspa_vid_get_property (GObject * object, guint prop_id,
+static void gst_ladspa_vid_flanger_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
-static gboolean gst_ladspa_vid_set_caps (GstPad * pad, GstCaps * caps);
-static GstFlowReturn gst_ladspa_vid_chain (GstPad * pad, GstBuffer * buf);
+static gboolean gst_ladspa_vid_flanger_set_caps (GstPad * pad, GstCaps * caps);
+static GstFlowReturn gst_ladspa_vid_flanger_chain (GstPad * pad, GstBuffer * buf);
 
 /* GObject vmethod implementations */
 
 static void
-gst_ladspa_vid_base_init (gpointer gclass)
+gst_ladspa_vid_flanger_base_init (gpointer gclass)
 {
   GstElementClass *element_class = GST_ELEMENT_CLASS (gclass);
 
   gst_element_class_set_details_simple(element_class,
-    "LadspaVid",
+    "LadspaVidFlanger",
     "Effect/Video",
     "Feed video through ladspa plugins to create video-glitching effects inspired by http://www.hellocatfood.com/2009/11/16/databending-using-audacity/",
     "Koen Martens <gmc@sonologic.nl>");
@@ -131,9 +131,9 @@ gst_ladspa_vid_base_init (gpointer gclass)
       gst_static_pad_template_get (&sink_factory));
 }
 
-/* initialize the ladspavid's class */
+/* initialize the ladspavidflanger's class */
 static void
-gst_ladspa_vid_class_init (GstLadspaVidClass * klass)
+gst_ladspa_vid_flanger_class_init (GstLadspaVidFlangerClass * klass)
 {
   GObjectClass *gobject_class;
   GstElementClass *gstelement_class;
@@ -141,8 +141,8 @@ gst_ladspa_vid_class_init (GstLadspaVidClass * klass)
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
 
-  gobject_class->set_property = gst_ladspa_vid_set_property;
-  gobject_class->get_property = gst_ladspa_vid_get_property;
+  gobject_class->set_property = gst_ladspa_vid_flanger_set_property;
+  gobject_class->get_property = gst_ladspa_vid_flanger_get_property;
 
   g_object_class_install_property (gobject_class, PROP_SILENT,
       g_param_spec_boolean ("silent", "Silent", "Produce verbose output ?",
@@ -177,8 +177,8 @@ gst_ladspa_vid_class_init (GstLadspaVidClass * klass)
  * initialize instance structure
  */
 static void
-gst_ladspa_vid_init (GstLadspaVid * filter,
-    GstLadspaVidClass * gclass)
+gst_ladspa_vid_flanger_init (GstLadspaVidFlanger * filter,
+    GstLadspaVidFlangerClass * gclass)
 {
   memset(&filter->wrapper,0,sizeof(ladspa_wrapper));
   printf("init plugin\n");
@@ -189,11 +189,11 @@ gst_ladspa_vid_init (GstLadspaVid * filter,
 
 
   gst_pad_set_setcaps_function (filter->sinkpad,
-                                GST_DEBUG_FUNCPTR(gst_ladspa_vid_set_caps));
+                                GST_DEBUG_FUNCPTR(gst_ladspa_vid_flanger_set_caps));
   gst_pad_set_getcaps_function (filter->sinkpad,
                                 GST_DEBUG_FUNCPTR(gst_pad_proxy_getcaps));
   gst_pad_set_chain_function (filter->sinkpad,
-                              GST_DEBUG_FUNCPTR(gst_ladspa_vid_chain));
+                              GST_DEBUG_FUNCPTR(gst_ladspa_vid_flanger_chain));
 
   filter->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
   gst_pad_set_getcaps_function (filter->srcpad,
@@ -205,10 +205,10 @@ gst_ladspa_vid_init (GstLadspaVid * filter,
 }
 
 static void
-gst_ladspa_vid_set_property (GObject * object, guint prop_id,
+gst_ladspa_vid_flanger_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
 {
-  GstLadspaVid *filter = GST_LADSPAVID (object);
+  GstLadspaVidFlanger *filter = GST_LADSPAVIDFLANGER (object);
 
   switch (prop_id) {
     case PROP_SILENT:
@@ -233,10 +233,10 @@ gst_ladspa_vid_set_property (GObject * object, guint prop_id,
 }
 
 static void
-gst_ladspa_vid_get_property (GObject * object, guint prop_id,
+gst_ladspa_vid_flanger_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec)
 {
-  GstLadspaVid *filter = GST_LADSPAVID (object);
+  GstLadspaVidFlanger *filter = GST_LADSPAVIDFLANGER (object);
 
   switch (prop_id) {
     case PROP_SILENT:
@@ -264,12 +264,12 @@ gst_ladspa_vid_get_property (GObject * object, guint prop_id,
 
 /* this function handles the link with other elements */
 static gboolean
-gst_ladspa_vid_set_caps (GstPad * pad, GstCaps * caps)
+gst_ladspa_vid_flanger_set_caps (GstPad * pad, GstCaps * caps)
 {
-  GstLadspaVid *filter;
+  GstLadspaVidFlanger *filter;
   GstPad *otherpad;
 
-  filter = GST_LADSPAVID (gst_pad_get_parent (pad));
+  filter = GST_LADSPAVIDFLANGER (gst_pad_get_parent (pad));
   otherpad = (pad == filter->srcpad) ? filter->sinkpad : filter->srcpad;
   gst_object_unref (filter);
 
@@ -280,11 +280,11 @@ gst_ladspa_vid_set_caps (GstPad * pad, GstCaps * caps)
  * this function does the actual processing
  */
 static GstFlowReturn
-gst_ladspa_vid_chain (GstPad * pad, GstBuffer * buf)
+gst_ladspa_vid_flanger_chain (GstPad * pad, GstBuffer * buf)
 {
-  GstLadspaVid *filter;
+  GstLadspaVidFlanger *filter;
 
-  filter = GST_LADSPAVID (GST_OBJECT_PARENT (pad));
+  filter = GST_LADSPAVIDFLANGER (GST_OBJECT_PARENT (pad));
 
   //if (filter->silent == FALSE)
   //  g_print ("I'm plugged, therefore I'm in.\n");
@@ -300,26 +300,21 @@ gst_ladspa_vid_chain (GstPad * pad, GstBuffer * buf)
  * register the element factories and other features
  */
 static gboolean
-ladspavid_init (GstPlugin * ladspavid)
+ladspavidflanger_init (GstPlugin * ladspavidflanger)
 {
   /* debug category for fltering log messages
    *
-   * exchange the string 'Template ladspavid' with your description
+   * exchange the string 'Template ladspavidflanger' with your description
    */
-  GST_DEBUG_CATEGORY_INIT (gst_ladspa_vid_debug, "ladspavid",
-      0, "Template ladspavid");
+  GST_DEBUG_CATEGORY_INIT (gst_ladspa_vid_flanger_debug, "ladspavidflanger",
+      0, "Template ladspavidflanger");
 
   gst_controller_init(NULL, NULL);
 
-  return gst_element_register (ladspavid, "ladspavid", GST_RANK_NONE,
-      GST_TYPE_LADSPAVID);
+  return gst_element_register (ladspavidflanger, "ladspavidflanger", GST_RANK_NONE,
+      GST_TYPE_LADSPAVIDFLANGER);
 }
 
-/* PACKAGE: this is usually set by autotools depending on some _INIT macro
- * in configure.ac and then written into and defined in config.h, but we can
- * just set it ourselves here in case someone doesn't use autotools to
- * compile this code. GST_PLUGIN_DEFINE needs PACKAGE to be defined.
- */
 #ifndef PACKAGE
 #define PACKAGE "ladspavid"
 #endif
@@ -331,9 +326,9 @@ ladspavid_init (GstPlugin * ladspavid)
 GST_PLUGIN_DEFINE (
     GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
-    "ladspavid",
-    "Ladspa video filter",
-    ladspavid_init,
+    "ladspavid flanger",
+    "Ladspa video flanger",
+    ladspavidflanger_init,
     VERSION,
     "LGPL",
     "GStreamer",
