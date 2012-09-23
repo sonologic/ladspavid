@@ -19,3 +19,6 @@ src/.libs/
 src/Makefile
 src/libgstladspavid.la
 src/libgstladspavid_la-gstladspavid.lo
+*.la
+*.lo
+*.o
