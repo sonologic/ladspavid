@@ -1,0 +1,5 @@
+AutoGen Definitions gstladspavid;
+name_lower = flanger;
+name_upper = FLANGER;
+name_class = Flanger;
+name_so = flanger_1191.so;

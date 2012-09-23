@@ -1,0 +1,5 @@
+AutoGen Definitions gstladspavid;
+name_lower = crossoverdistort;
+name_upper = CROSSOVERDISTORT;
+name_class = CrossoverDistort;
+name_so = crossover_dist_1404.so;
