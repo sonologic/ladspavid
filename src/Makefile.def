@@ -1,0 +1,9 @@
+AutoGen Definitions Makefile.tpl;
+plugin = { plugin_name = flanger; plugin_so = flanger_1191.so; };
+plugin = { plugin_name = crossoverdist; plugin_so = crossover_dist_1404.so; };
+plugin = { plugin_name = dysoncompress; plugin_so = dyson_compress_1403.so; };
+plugin = { plugin_name = zm1; plugin_so = zm1_1428.so; };
+plugin = { plugin_name = giantflange; plugin_so = giant_flange_1437.so; };
+plugin = { plugin_name = bodeshifter; plugin_so = bode_shifter_1431.so; };
+plugin = { plugin_name = se4; plugin_so = se4_1883.so; };
+plugin = { plugin_name = delayorama; plugin_so = delayorama_1402.so; };
