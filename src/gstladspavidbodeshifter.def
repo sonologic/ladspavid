@@ -1,0 +1,5 @@
+AutoGen Definitions gstladspavid;
+name_lower = bodeshifter;
+name_upper = BODESHIFTER;
+name_class = Bodeshifter;
+name_so = bode_shifter_1431.so;

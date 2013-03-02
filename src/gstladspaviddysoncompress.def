@@ -1,0 +1,5 @@
+AutoGen Definitions gstladspavid;
+name_lower = dysoncompress;
+name_upper = DYSONCOMPRESS;
+name_class = Dysoncompress;
+name_so = dyson_compress_1403.so;

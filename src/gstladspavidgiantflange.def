@@ -1,0 +1,5 @@
+AutoGen Definitions gstladspavid;
+name_lower = giantflange;
+name_upper = GIANTFLANGE;
+name_class = Giantflange;
+name_so = giant_flange_1437.so;

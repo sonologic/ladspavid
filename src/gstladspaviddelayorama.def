@@ -1,0 +1,5 @@
+AutoGen Definitions gstladspavid;
+name_lower = delayorama;
+name_upper = DELAYORAMA;
+name_class = Delayorama;
+name_so = delayorama_1402.so;
